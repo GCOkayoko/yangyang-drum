@@ -4,7 +4,104 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>大鼓 大鼓 敲敲敲</title>
-<link rel="stylesheet" href="css/style.css">
+<style>
+:root {
+  --bg: #0a0e17;
+  --surface: #111827;
+  --gold: #c9a961;
+  --gold-dim: #7a6a3d;
+  --blue: #4a90d9;
+  --text: #d0cfc8;
+  --text-dim: #888;
+  --stage-size: 420px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; overflow: hidden;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.particles {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+.particle {
+  position: absolute; font-size: 16px;
+  animation: floatUp 5s linear infinite; opacity: 0;
+}
+@keyframes floatUp {
+  0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  85%  { opacity: 0.2; }
+  100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+.container {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.title {
+  font-weight: 700; letter-spacing: 6px;
+  display: flex; justify-content: center; align-items: baseline;
+}
+.title span {
+  display: inline-block; font-weight: 700; color: var(--gold);
+  text-shadow: 0 0 30px rgba(201,169,97,0.3);
+}
+.stages { display: flex; gap: 20px; align-items: center; }
+.stage-wrapper {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.stage-label { font-size: 13px; color: var(--text-dim); letter-spacing: 3px; }
+.stage {
+  position: relative; width: var(--stage-size); height: var(--stage-size);
+  border-radius: 16px; overflow: hidden;
+  background: radial-gradient(ellipse at center, rgba(74,144,217,0.05) 0%, transparent 70%);
+}
+.character {
+  position: absolute; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.character img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  transition: transform 0.06s ease-out;
+  filter: drop-shadow(0 0 30px rgba(74,144,217,0.12));
+}
+.character.shake img { transform: translateY(-3px) scale(1.02); }
+.drum-zone {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  cursor: pointer; z-index: 2; border-radius: 16px; transition: background 0.12s;
+}
+.drum-zone:active, .drum-zone.flash {
+  background: radial-gradient(ellipse at center, rgba(201,169,97,0.15) 0%, transparent 70%);
+}
+.hit-fx {
+  position: absolute; pointer-events: none; z-index: 3;
+  font-size: 28px; font-weight: bold; color: var(--gold);
+  animation: hitPop 0.6s ease-out forwards;
+}
+@keyframes hitPop {
+  0%   { transform: scale(0.5) translateY(0); opacity: 1; }
+  100% { transform: scale(1.4) translateY(-50px); opacity: 0; }
+}
+.controls { display: flex; gap: 10px; }
+.btn {
+  padding: 8px 20px; border: 1px solid var(--gold-dim);
+  background: transparent; color: var(--gold-dim);
+  font-size: 13px; letter-spacing: 2px; border-radius: 6px;
+  cursor: pointer; transition: all 0.25s;
+}
+.btn:hover { border-color: var(--gold); color: var(--gold); }
+.btn.active {
+  background: rgba(201,169,97,0.12); border-color: var(--gold); color: var(--gold);
+}
+.key-hint { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; }
+@media (max-width: 920px) {
+  .stages { flex-direction: column; gap: 12px; }
+  :root { --stage-size: 340px; }
+}
+</style>
 </head>
 <body>
 
@@ -12,9 +109,7 @@
 
 <div class="container">
   <div class="title" id="titleEl"></div>
-
   <div class="stages">
-    <!-- 敲鼓1 - 左 -->
     <div class="stage-wrapper">
       <div class="stage-label">◁ 敲鼓1</div>
       <div class="stage" id="stage1">
@@ -24,8 +119,6 @@
         <div class="drum-zone" id="zone1"></div>
       </div>
     </div>
-
-    <!-- 敲鼓2 - 右 -->
     <div class="stage-wrapper">
       <div class="stage-label">敲鼓2 ▷</div>
       <div class="stage" id="stage2">
@@ -36,7 +129,6 @@
       </div>
     </div>
   </div>
-
   <div class="controls">
     <button class="btn" id="btnAuto">▶ 自动播放</button>
     <button class="btn" id="btnReset">↺ 归零</button>
@@ -46,6 +138,120 @@
   </div>
 </div>
 
-<script src="js/main.js"></script>
+<script>
+(function() {
+
+var drumAudio = new Audio('audio/%E9%BC%93%E5%A3%B0.mp3');
+drumAudio.preload = 'auto';
+function playDrumOnce() { drumAudio.currentTime = 0; drumAudio.play().catch(function(){}); }
+
+var f1 = 0, f2 = 0;
+var TOTAL1 = 20, TOTAL2 = 60;
+var img1 = document.getElementById('img1');
+var img2 = document.getElementById('img2');
+var char1 = document.getElementById('char1');
+var char2 = document.getElementById('char2');
+var zone1 = document.getElementById('zone1');
+var zone2 = document.getElementById('zone2');
+var stage1 = document.getElementById('stage1');
+var stage2 = document.getElementById('stage2');
+
+function pad3(n) { return n < 10 ? '00' + n : n < 100 ? '0' + n : '' + n; }
+function framePath1(n) { return 'img/drum1_frame_' + pad3(n+1) + '.png'; }
+function framePath2(n) { return 'img/frame_' + pad3(n+1) + '.png'; }
+
+function advanceFrame() {
+  f1 = (f1 + 1) % TOTAL1; f2 = (f2 + 1) % TOTAL2;
+  img1.src = framePath1(f1); img2.src = framePath2(f2);
+  char1.classList.add('shake'); zone1.classList.add('flash');
+  char2.classList.add('shake'); zone2.classList.add('flash');
+  setTimeout(function() {
+    char1.classList.remove('shake'); zone1.classList.remove('flash');
+    char2.classList.remove('shake'); zone2.classList.remove('flash');
+  }, 100);
+  spawnFx(stage1, '咚'); spawnFx(stage2, '嗒');
+}
+
+function hitDrum() { advanceFrame(); playDrumOnce(); }
+
+function spawnFx(parent, text) {
+  var fx = document.createElement('div');
+  fx.className = 'hit-fx'; fx.textContent = text;
+  fx.style.left = '42%'; fx.style.top = '38%';
+  parent.appendChild(fx);
+  setTimeout(function() { fx.remove(); }, 600);
+}
+
+function resetAll() {
+  stopAuto();
+  f1 = 0; f2 = 0;
+  img1.src = framePath1(0); img2.src = framePath2(0);
+}
+
+var autoTimer = null, autoRunning = false;
+var SPEED = 100;
+
+function toggleAuto() { if (autoRunning) stopAuto(); else startAuto(); }
+function startAuto() {
+  autoRunning = true;
+  document.getElementById('btnAuto').textContent = '⏸ 停止';
+  document.getElementById('btnAuto').classList.add('active');
+  autoStep();
+}
+function stopAuto() {
+  autoRunning = false;
+  if (autoTimer) clearTimeout(autoTimer);
+  autoTimer = null;
+  document.getElementById('btnAuto').textContent = '▶ 自动播放';
+  document.getElementById('btnAuto').classList.remove('active');
+}
+function autoStep() {
+  if (!autoRunning) return;
+  advanceFrame();
+  drumAudio.currentTime = 0; drumAudio.play().catch(function(){});
+  autoTimer = setTimeout(autoStep, SPEED);
+}
+
+document.getElementById('btnAuto').addEventListener('click', toggleAuto);
+document.getElementById('btnReset').addEventListener('click', resetAll);
+
+document.addEventListener('keydown', function(e) {
+  if (e.repeat) return;
+  var k = e.key.toLowerCase();
+  if (k === 'f' || k === 'j') hitDrum();
+  if (k === ' ') { e.preventDefault(); toggleAuto(); }
+});
+
+zone1.addEventListener('click', hitDrum);
+zone2.addEventListener('click', hitDrum);
+
+// 粒子
+var particlesEl = document.getElementById('particles');
+var symbols = ['🐦','🕊️','🦜','🦅','🦉','🐤','🦆','🐧','🐓','🦢'];
+for (var i = 0; i < 12; i++) {
+  var p = document.createElement('span');
+  p.className = 'particle';
+  p.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+  p.style.left = Math.random() * 100 + '%';
+  p.style.animationDelay = Math.random() * 6 + 's';
+  p.style.animationDuration = (3 + Math.random() * 5) + 's';
+  p.style.fontSize = (10 + Math.random() * 14) + 'px';
+  particlesEl.appendChild(p);
+}
+
+// 标题逐字变大
+var titleText = '大鼓 大鼓 敲敲敲！！！';
+var titleEl = document.getElementById('titleEl');
+var chars = titleText.split('');
+chars.forEach(function(ch, i) {
+  var s = document.createElement('span');
+  s.textContent = ch;
+  var size = 16 + (i / (chars.length - 1)) * 24;
+  s.style.fontSize = size + 'px';
+  titleEl.appendChild(s);
+});
+
+})();
+</script>
 </body>
 </html>
