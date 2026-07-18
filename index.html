@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大鼓 大鼓 敲敲敲</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="container">
+  <div class="title" id="titleEl"></div>
+
+  <div class="stages">
+    <!-- 敲鼓1 - 左 -->
+    <div class="stage-wrapper">
+      <div class="stage-label">◁ 敲鼓1</div>
+      <div class="stage" id="stage1">
+        <div class="character" id="char1">
+          <img src="img/drum1_frame_001.png" alt="秧秧1" id="img1">
+        </div>
+        <div class="drum-zone" id="zone1"></div>
+      </div>
+    </div>
+
+    <!-- 敲鼓2 - 右 -->
+    <div class="stage-wrapper">
+      <div class="stage-label">敲鼓2 ▷</div>
+      <div class="stage" id="stage2">
+        <div class="character" id="char2">
+          <img src="img/frame_001.png" alt="秧秧2" id="img2">
+        </div>
+        <div class="drum-zone" id="zone2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btnAuto" onclick="toggleAuto()">▶ 自动播放</button>
+    <button class="btn" onclick="resetAll()">↺ 归零</button>
+  </div>
+  <div class="key-hint">
+    键盘 <b>F / J</b> 或点击 &nbsp;|&nbsp; <b>空格</b> 启停自动播放
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
